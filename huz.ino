@@ -44,10 +44,6 @@
 
 Adafruit_HDC1000 hdc = Adafruit_HDC1000();
 
-#if defined(ARDUINO_ARCH_SAMD)
-// for Zero, output on USB Serial console, remove line below if using programming port to program the Zero!
-   #define Serial SerialUSB
-#endif
 
 #define MAX_SSID 4
 const char * ssids[MAX_SSID][2] = {
@@ -197,7 +193,7 @@ void loop() {
 #if SENSOR_BLINK
     digitalWrite(2, LOW);  // switch LED on 
     digitalWrite(3, HIGH);  // switch LED on 
-    delay(40);            // keep LED on for 1s
+    delay(40);            // keep LED on for 40 millis
     digitalWrite(2, HIGH);   // switch LED off
     digitalWrite(3, LOW);   // switch LED off
 #endif
