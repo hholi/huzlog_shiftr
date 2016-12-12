@@ -17,6 +17,7 @@
 // SET to 1 only when deep sleeping 30 sec between
 // Then pin for chip reset must also be connected!
 #define DEEPSLEEP 0
+#define SLEEP_SEC 3600
 
 // SET TO 0 for SENSOR BOARD !!!!
 #define OLED 0
@@ -121,6 +122,8 @@ void setup() {
   }
   if (5 > retries) {
     hdcExist = true;
+  }else {
+    Serial.println("Simulating sensors");    
   }
 
 #if OLED
@@ -229,7 +232,7 @@ void loop() {
 
 #if DEEPSLEEP
     Serial.print("Sleeping ");
-    ESP.deepSleep(30000000);
+    ESP.deepSleep(1000000 * SLEEP_SEC);
 #endif
   }
 }
