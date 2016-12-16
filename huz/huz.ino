@@ -11,6 +11,9 @@
 #include <ESP8266WiFi.h>
 #include <MQTTClient.h>
 
+// The secrets contained in separate file
+#include "secrets.h"
+
 // SET to 1 for Huzzah ESP8266 breakout, when connected SDA=#4, SCL=#5
 #define ESP8266 1
 
@@ -45,14 +48,6 @@
 
 Adafruit_HDC1000 hdc = Adafruit_HDC1000();
 
-
-#define MAX_SSID 4
-const char * ssids[MAX_SSID][2] = {
-  {"ssid1", "password"},
-  {"ssid1", "password"},
-  {"ssid1", "password"},
-  {"ssid1", "password"} 
-};
 
 int ssidIndex = 0;
 int timer = 0;
