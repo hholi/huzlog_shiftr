@@ -11,7 +11,8 @@ Shiftr.io as MQTT message broker.
 * Running on battery
 * Deep sleep
 * Small case for sensor module
-*
+* TDD
+
 
 ### Reference docs
 
