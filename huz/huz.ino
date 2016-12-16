@@ -256,3 +256,8 @@ void messageReceived(String topic, String payload, char * bytes, unsigned int le
   }
   
 }
+
+int dummyF() {
+  return 42;
+}
+
