@@ -150,7 +150,7 @@ void connect() {
   }
 
   Serial.print("\nconnecting...");
-  while (!client.connect("ClientId", "user", "password")) {
+  while (!client.connect("ClientId", MQTT_USER, MQTT_TOKEN)) {
     Serial.print(".");
     delay(1000);
   }
@@ -158,7 +158,7 @@ void connect() {
   Serial.println("\nconnected!");
 
 #if SUBSCRIBE
-  client.subscribe("/hholi/smibakken/house1/floor0/temperature");
+  client.subscribe("/hholi/site1/house1/floor0/temperature");
 #endif
 
 }
@@ -201,29 +201,27 @@ void loop() {
       return;
     }
 
-    if (hdcExist) {
 
 #if OLED
-      u8g2.clear();
-      u8g2.setFont(u8g2_font_ncenB08_tr);
-      u8g2.drawStr(1,8,"Telemetry active");
-      u8g2.setFont(u8g2_font_ncenB12_tr);
-      String message = "Temp: " + String(t);
-      message.toCharArray(buf, 100);
-      u8g2.drawStr(0,28,buf);
-      message = "Hum: " + String(h);
-      message.toCharArray(buf, 100);
-      u8g2.drawStr(0,44,buf);
-      u8g2.nextPage();
-      
+    u8g2.clear();
+    u8g2.setFont(u8g2_font_ncenB08_tr);
+    u8g2.drawStr(1,8,"Telemetry active");
+    u8g2.setFont(u8g2_font_ncenB12_tr);
+    String message = "Temp: " + String(t);
+    message.toCharArray(buf, 100);
+    u8g2.drawStr(0,28,buf);
+    message = "Hum: " + String(h);
+    message.toCharArray(buf, 100);
+    u8g2.drawStr(0,44,buf);
+    u8g2.nextPage();      
 #endif
 
-      client.publish("/hholi/smibakken/house1/floor0/temperature", String(t));
-      client.publish("/hholi/smibakken/house1/floor0/humidity", String(h));
-      client.publish("/hholi/smibakken/house1/floor0/smoke", "no");
-      client.publish("/hholi/smibakken/house2/floor1/temperature", String(t));
-      client.publish("/hholi/smibakken/house2/floor1/humidity", String(h));
-    }
+    client.publish("/hholi/site1/house1/floor0/temperature", String(t));
+    client.publish("/hholi/site1/house1/floor0/humidity", String(h));
+    client.publish("/hholi/site1/house1/floor0/smoke", "no");
+    client.publish("/hholi/site1/house2/floor1/temperature", String(t));
+    client.publish("/hholi/site1/house2/floor1/humidity", String(h));
+    
 
 #if DEEPSLEEP
     Serial.print("Sleeping ");
