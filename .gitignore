@@ -1,1 +1,6 @@
 huz/secrets.h
+test/CMakeCache.txt
+test/CMakeFiles/
+test/Makefile
+test/cmake_install.cmake
+test/runTests

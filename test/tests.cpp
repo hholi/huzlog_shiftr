@@ -1,6 +1,7 @@
 // tests.cpp
 #include "../huz/dummy.cpp"
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
  
 TEST(InitialTest, SpecialNo) { 
     ASSERT_EQ(42, dummyF());
