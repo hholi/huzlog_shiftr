@@ -1,0 +1,2 @@
+eclipse.preferences.version=1
+libraries=["Adafruit HDC1000 Library",{"package"\:"esp8266","platform"\:"esp8266","library"\:"ESP8266WiFi"},"U8g2",{"package"\:"esp8266","platform"\:"esp8266","library"\:"SPI"},"MQTT",{"package"\:"esp8266","platform"\:"esp8266","library"\:"Wire"}]
