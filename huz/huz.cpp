@@ -22,11 +22,18 @@
 #define SLEEP_SEC 3600
 
 // SET TO 0 for SENSOR BOARD !!!!
-#define OLED 0
-#define SUBSCRIBE 0
+#define OLED 1
+#define SUBSCRIBE 1
 
 // SET to 1 only if you want a blink each time sensors are read
 #define SENSOR_BLINK 1
+
+#define MQTT_BROKER             "mqtt.hallgeirholien.no"
+#define MQTT_BROKER_PORT        8883
+// Only change this if you have a newer certificate fingerprint
+// Get certificate using this:
+// openssl s_client -servername mqtt.hallgeirholien.no -connect mqtt.hallgeirholien.no:8883 < /dev/null 2>/dev/null | openssl x509 -fingerprint -noout -in /dev/stdin
+const char* fingerprint = "07:67:B4:D9:CC:33:53:52:36:14:D4:6E:9B:AD:3E:10:27:CD:A4:48";
 
 //Sensors
 #include <Wire.h>
@@ -68,6 +75,19 @@ void connect(); // <- predefine connect() for setup()
 bool hdcExist = false;
 
 
+void showStatus(const char* msg) {
+	Serial.println(msg);
+#if OLED
+	u8g2.begin();
+	u8g2.firstPage();
+
+	u8g2.setFont(u8g2_font_ncenB08_tr);
+	u8g2.drawStr(1,8,msg);
+	u8g2.nextPage();
+#endif
+
+}
+
 void setup() {
 
 #if SENSOR_BLINK
@@ -80,32 +100,27 @@ void setup() {
 #endif 
   
   Serial.begin(9600);
-#if OLED
-  u8g2.begin();
-  u8g2.firstPage();
-
-  u8g2.setFont(u8g2_font_ncenB08_tr);
-  u8g2.drawStr(1,8,"connecting...");
-  u8g2.nextPage();
-#endif
-  
+  showStatus("connecting...");
   WiFi.begin(ssids[ssidIndex][0], ssids[ssidIndex][1]);
-  client.begin("broker.shiftr.io", 8883, net); // MQTT brokers usually use port 8883 for secure connections
+  client.begin("mqtt.hallgeirholien.no", 8883, net); // MQTT brokers usually use port 8883 for secure connections
 
   connect();
 
-#if OLED
-  u8g2.clear();
-  u8g2.drawStr(1,8,"ok: ");
-  u8g2.nextPage();
+  showStatus("ok");
   delay(500);
-  
-  u8g2.clear();
-  u8g2.drawStr(1,8,"HDC100x test...");
-  u8g2.nextPage();
-#endif
+  showStatus("HDC100x test...");
+//#if OLED
+//  u8g2.clear();
+//  u8g2.drawStr(1,8,"ok: ");
+//  u8g2.nextPage();
+//  delay(500);
+//
+//  u8g2.clear();
+//  u8g2.drawStr(1,8,"HDC100x test...");
+//  u8g2.nextPage();
+//#endif
 
-  Serial.println("HDC100x test");
+//  Serial.println("HDC100x test");
 
   int retries = 0;
   while (!hdc.begin() && retries++ < 5) {
@@ -129,8 +144,32 @@ void setup() {
 
 }
 
+void verifySecure() {
+
+	WiFiClientSecure client;
+
+  const char* host = MQTT_BROKER;
+  String msg = "Connecting to ";
+  msg.concat(host);
+  showStatus(msg.c_str());
+//  Serial.println(host);
+
+  if (! client.connect(host, MQTT_BROKER_PORT)) {
+	  showStatus("Connection failed. Halting execution.");
+	  while(1);
+  }
+
+  // Shut down connection if host identity cannot be trusted.
+  if (client.verify(fingerprint, host)) {
+	  showStatus("Connection secure.");
+  } else {
+	  showStatus("Connection insecure! Halting execution.");
+    while(1);
+  }
+}
+
 void connect() {
-  Serial.print("checking wifi ...");
+  showStatus("checking wifi ...");
   Serial.print(ssids[ssidIndex][0]);
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
@@ -148,6 +187,8 @@ void connect() {
     
   }
 
+  verifySecure();
+
   Serial.print("\nconnecting...");
   while (!client.connect("ClientId", MQTT_USER, MQTT_TOKEN)) {
     Serial.print(".");
@@ -157,7 +198,7 @@ void connect() {
   Serial.println("\nconnected!");
 
 #if SUBSCRIBE
-  client.subscribe("/hholi/site1/house1/floor0/temperature");
+  client.subscribe("owntracks/#");
 #endif
 
 }
