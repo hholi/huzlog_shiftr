@@ -74,6 +74,7 @@ void connect(); // <- predefine connect() for setup()
 
 bool hdcExist = false;
 
+const char* subscribeToken = "owntracks/#";
 
 void showStatus(const char* msg) {
 	Serial.println(msg);
@@ -99,7 +100,7 @@ void setup() {
   Wire.pins(4, 5);   // ESP8266 can use any two pins, such as SDA to #4 and SCL to #5  
 #endif 
   
-  Serial.begin(9600);
+  Serial.begin(115000);
   showStatus("connecting...");
   WiFi.begin(ssids[ssidIndex][0], ssids[ssidIndex][1]);
   client.begin("mqtt.hallgeirholien.no", 8883, net); // MQTT brokers usually use port 8883 for secure connections
@@ -137,7 +138,11 @@ void setup() {
 
 #if OLED
   u8g2.clear();
-  u8g2.drawStr(1,8,"HDC100x ok");
+  if(hdcExist) {
+	  u8g2.drawStr(1,8,"HDC100x ok");
+  } else {
+	  u8g2.drawStr(1,8,"Simulate sensors");
+  }
   u8g2.nextPage();
   delay(500);
 #endif
@@ -198,7 +203,7 @@ void connect() {
   Serial.println("\nconnected!");
 
 #if SUBSCRIBE
-  client.subscribe("owntracks/#");
+  client.subscribe(subscribeToken);
 #endif
 
 }
@@ -256,11 +261,12 @@ void loop() {
     u8g2.nextPage();      
 #endif
 
-    client.publish("/hholi/site1/house1/floor0/temperature", String(t));
-    client.publish("/hholi/site1/house1/floor0/humidity", String(h));
-    client.publish("/hholi/site1/house1/floor0/smoke", "no");
-    client.publish("/hholi/site1/house2/floor1/temperature", String(t));
-    client.publish("/hholi/site1/house2/floor1/humidity", String(h));
+        client.publish("rv90b/garage", "{portopen: true}");
+//    client.publish("/hholi/site1/house1/floor0/temperature", String(t));
+//    client.publish("/hholi/site1/house1/floor0/humidity", String(h));
+//    client.publish("/hholi/site1/house1/floor0/smoke", "no");
+//    client.publish("/hholi/site1/house2/floor1/temperature", String(t));
+//    client.publish("/hholi/site1/house2/floor1/humidity", String(h));
     
 
 #if DEEPSLEEP
@@ -273,8 +279,8 @@ void loop() {
 void messageReceived(String topic, String payload, char * bytes, unsigned int length) {
   Serial.print("incoming: ");
   Serial.print(topic);
-  Serial.print(" - ");
-  Serial.print(payload);
+//  Serial.print(" - ");
+//  Serial.print(payload);
   Serial.println();
 
   if (!hdcExist) {
@@ -282,16 +288,18 @@ void messageReceived(String topic, String payload, char * bytes, unsigned int le
     u8g2.clear();
     u8g2.setFont(u8g2_font_ncenB08_tr);
     u8g2.drawStr(1,8,"Monitoring mode");
-    String message = topic;
-    message.toCharArray(buf, 100);
-    u8g2.drawStr(0,24,buf);
-    message =  payload;
-    message.toCharArray(buf, 100);
-    u8g2.setFont(u8g2_font_ncenB12_tr);
-    u8g2.drawStr(0,40,buf);
+    u8g2.drawStr(0,24,topic.c_str());
     
-    u8g2.setFont(u8g2_font_unifont_t_symbols);
-    u8g2.nextPage();
+//    String message = topic;
+//    message.toCharArray(buf, 100);
+//    u8g2.drawStr(0,24,buf);
+//    message =  payload;
+//    message.toCharArray(buf, 100);
+//    u8g2.setFont(u8g2_font_ncenB12_tr);
+//    u8g2.drawStr(0,40,buf);
+//
+//    u8g2.setFont(u8g2_font_unifont_t_symbols);
+//    u8g2.nextPage();
 #endif    
   }
   
