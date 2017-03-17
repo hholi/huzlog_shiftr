@@ -122,8 +122,8 @@ void setup() {
   
   Serial.begin(115000);
   showStatus("connecting...");
-  WiFi.begin(ssids[ssidIndex][0], ssids[ssidIndex][1]);
-  mqttClient.begin("mqtt.hallgeirholien.no", 8883, net); // MQTT brokers usually use port 8883 for secure connections
+//  WiFi.begin(ssids[ssidIndex][0], ssids[ssidIndex][1]);
+//  mqttClient.begin("mqtt.hallgeirholien.no", 8883, net); // MQTT brokers usually use port 8883 for secure connections
 
   connect();
 
@@ -238,83 +238,93 @@ Comments: -
 //}
 
 void connect() {
-//#if WPAEAP
-  showStatus("checking wifi EAP ...");
-  Serial.begin(SERIAL_BAUD_RATE);
-  delay(STARTUP_DELAY_MS);
+	while (ssids[ssidIndex][4] != "Y") {
+		ssidIndex++;
+		ssidIndex = ssidIndex % MAX_SSID;
+	}
+	if (strcmp(ssids[ssidIndex][3], "EAP") == 0) {
+		showStatus("Checking wifi EAP ...");
+		Serial.begin(SERIAL_BAUD_RATE);
+		delay(STARTUP_DELAY_MS);
 
-  // Setting ESP into STATION mode only (no AP mode or dual mode)
-  wifi_set_opmode(STATION_MODE);
+		// Setting ESP into STATION mode only (no AP mode or dual mode)
+		wifi_set_opmode(STATION_MODE);
 
-  struct station_config wifi_config;
+		struct station_config wifi_config;
 
-  memset(&wifi_config, 0, sizeof(wifi_config));
-  strcpy((char*)wifi_config.ssid, ssid);
+		memset(&wifi_config, 0, sizeof(wifi_config));
+		strcpy((char*)wifi_config.ssid, ssids[ssidIndex][0]);
 
-  wifi_station_set_config(&wifi_config);
+		wifi_station_set_config(&wifi_config);
 
-  wifi_station_clear_cert_key();
-  wifi_station_clear_enterprise_ca_cert();
+		wifi_station_clear_cert_key();
+		wifi_station_clear_enterprise_ca_cert();
 
-  wifi_station_set_wpa2_enterprise_auth(1);
-  wifi_station_set_enterprise_username((uint8*)username, strlen(username));
-  wifi_station_set_enterprise_password((uint8*)password, strlen(password));
+		wifi_station_set_wpa2_enterprise_auth(1);
+		wifi_station_set_enterprise_username((uint8*)ssids[ssidIndex][2], strlen(ssids[ssidIndex][2]));
+		wifi_station_set_enterprise_password((uint8*)ssids[ssidIndex][1], strlen(ssids[ssidIndex][1]));
 
-  wifi_station_connect();
+		wifi_station_connect();
 
-  // Wait for connection AND IP address from DHCP
-  int counter = 0;
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(2000);
-    counter++;
-    showStatus(String(counter).c_str());
-    Serial.print(".");
-  }
+		// Wait for connection AND IP address from DHCP
+		int counter = 0;
+		while (WiFi.status() != WL_CONNECTED) {
+			delay(2000);
+			counter++;
+			showStatus(String(counter).c_str());
+			Serial.print(".");
+		}
 
-  // Now we are connected
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-  showStatus(WiFi.localIP().toString().c_str());
-  delay(4000);
-//#else
-//  showStatus("checking wifi ...");
-//  Serial.print(ssids[ssidIndex][0]);
-//  while (WiFi.status() != WL_CONNECTED) {
-//    Serial.print(".");
-//    delay(1000);
-//    timer++;
-//    if(timer >= 10) {
-//      WiFi.disconnect();
-//      Serial.print("Trying next ssid: ");
-//      ssidIndex++;
-//      ssidIndex = ssidIndex % MAX_SSID;
-//      Serial.print(ssids[ssidIndex][0]);
-//      WiFi.begin(ssids[ssidIndex][0], ssids[ssidIndex][1]);
-//      timer=0;
-//    }
-//
-//  }
-//#endif
+		// Now we are connected
+		Serial.println("");
+		Serial.println("WiFi connected");
+		Serial.println("IP address: ");
+		Serial.println(WiFi.localIP());
 
-  // happymeter
-  // CURL -X POST http://localhost:3000/api/storehappydocument -d {"happystatus": "above", "tags": "in the morning"}
+	} else {
+		showStatus("checking wifi ...");
+		delay(500);
+		Serial.print(ssids[ssidIndex][0]);
+		while (WiFi.status() != WL_CONNECTED) {
+			Serial.print(".");
+			delay(1000);
+			timer++;
+			if(timer >= 10) {
+				WiFi.disconnect();
+				Serial.print("Trying next ssid: ");
+				showStatus("Trying next ssid: ");
+				delay(500);
+				ssidIndex++;
+				ssidIndex = ssidIndex % MAX_SSID;
+				Serial.print(ssids[ssidIndex][0]);
+				WiFi.begin(ssids[ssidIndex][0], ssids[ssidIndex][1]);
+				timer=0;
+			}
+		}
 
-//  httpPost();
+	}
+	showStatus(WiFi.localIP().toString().c_str());
+	delay(4000);
 
-  verifySecure();
+	// happymeter
+	// CURL -X POST http://localhost:3000/api/storehappydocument -d {"happystatus": "above", "tags": "in the morning"}
 
-  Serial.print("\nconnecting...");
-  while (!mqttClient.connect("ClientId", MQTT_USER, MQTT_TOKEN)) {
-    Serial.print(".");
-    delay(1000);
-  }
+	//  httpPost();
 
-  Serial.println("\nconnected!");
+	mqttClient.begin("mqtt.hallgeirholien.no", 8883, net); // MQTT brokers usually use port 8883 for secure connections
+
+	verifySecure();
+
+	Serial.print("\nconnecting...");
+	while (!mqttClient.connect("ClientId", MQTT_USER, MQTT_TOKEN)) {
+		Serial.print(".");
+		delay(1000);
+	}
+
+	Serial.println("\nconnected!");
 
 #if SUBSCRIBE
-  mqttClient.subscribe(subscribeToken);
+	mqttClient.subscribe(subscribeToken);
 #endif
 
 }
