@@ -43,6 +43,26 @@ const char* fingerprint = "07:67:B4:D9:CC:33:53:52:36:14:D4:6E:9B:AD:3E:10:27:CD
 // add the library U8g2 by oliver
 #include "U8g2lib.h" 
 
+
+//WPA EAP
+#define WPAEAP 1
+
+extern "C" {
+  #include "user_interface.h"
+  #include "wpa2_enterprise.h"
+}
+/*******************************************************************/
+#define SERIAL_BAUD_RATE      57600
+#define STARTUP_DELAY_MS      1000
+/*******************************************************************/
+// SSID to connect to
+//static const char* ssid = "ssidname";
+// Username for authentification
+//static const char* username = "identity";
+// Password for authentification
+//static const char* password = "password";
+
+
 // Connect Vin to 3-5VDC
 // Connect GND to ground
 // Connect SCL to I2C clock pin (A5 on UNO, D1 on NodeMCU)
@@ -60,7 +80,7 @@ int timer = 0;
 
 
 WiFiClientSecure net;
-MQTTClient client;
+MQTTClient mqttClient;
 
 #if OLED
 U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R0, SCL, SDA);
@@ -103,7 +123,7 @@ void setup() {
   Serial.begin(115000);
   showStatus("connecting...");
   WiFi.begin(ssids[ssidIndex][0], ssids[ssidIndex][1]);
-  client.begin("mqtt.hallgeirholien.no", 8883, net); // MQTT brokers usually use port 8883 for secure connections
+  mqttClient.begin("mqtt.hallgeirholien.no", 8883, net); // MQTT brokers usually use port 8883 for secure connections
 
   connect();
 
@@ -161,41 +181,132 @@ void verifySecure() {
 
   if (! client.connect(host, MQTT_BROKER_PORT)) {
 	  showStatus("Connection failed. Halting execution.");
+	  delay(2000);
 	  while(1);
   }
 
   // Shut down connection if host identity cannot be trusted.
   if (client.verify(fingerprint, host)) {
 	  showStatus("Connection secure.");
+	  delay(2000);
   } else {
 	  showStatus("Connection insecure! Halting execution.");
+	  delay(2000);
     while(1);
   }
 }
 
+/* ======================================================================
+Function: httpPost
+Purpose : Do a http post
+Input   : hostname
+          port
+          url
+Output  : true if received 200 OK
+Comments: -
+====================================================================== */
+//boolean httpPost(char * host, uint16_t port, char * url)
+//{
+//  HTTPClient http;
+//  bool ret = false;
+//
+//  unsigned long start = millis();
+//
+//  // configure target server and url
+//  http.begin(host, port, url, port==443 ? true : false);
+//  //http.begin("http://emoncms.org/input/post.json?node=20&apikey=apikey&json={PAPP:100}");
+//
+//  Debugf("http%s://%s:%d%s => ", port==443?"s":"", host, port, url);
+//
+//  // start connection and send HTTP header
+//  int httpCode = http.GET();
+//  if(httpCode) {
+//      // HTTP header has been send and Server response header has been handled
+//      Debug(httpCode);
+//      Debug(" ");
+//      // file found at server
+//      if(httpCode == 200) {
+//        String payload = http.getString();
+//        Debug(payload);
+//        ret = true;
+//      }
+//  } else {
+//      DebugF("failed!");
+//  }
+//  Debugf(" in %d ms\r\n",millis()-start);
+//  return ret;
+//}
+
 void connect() {
-  showStatus("checking wifi ...");
-  Serial.print(ssids[ssidIndex][0]);
+//#if WPAEAP
+  showStatus("checking wifi EAP ...");
+  Serial.begin(SERIAL_BAUD_RATE);
+  delay(STARTUP_DELAY_MS);
+
+  // Setting ESP into STATION mode only (no AP mode or dual mode)
+  wifi_set_opmode(STATION_MODE);
+
+  struct station_config wifi_config;
+
+  memset(&wifi_config, 0, sizeof(wifi_config));
+  strcpy((char*)wifi_config.ssid, ssid);
+
+  wifi_station_set_config(&wifi_config);
+
+  wifi_station_clear_cert_key();
+  wifi_station_clear_enterprise_ca_cert();
+
+  wifi_station_set_wpa2_enterprise_auth(1);
+  wifi_station_set_enterprise_username((uint8*)username, strlen(username));
+  wifi_station_set_enterprise_password((uint8*)password, strlen(password));
+
+  wifi_station_connect();
+
+  // Wait for connection AND IP address from DHCP
+  int counter = 0;
   while (WiFi.status() != WL_CONNECTED) {
+    delay(2000);
+    counter++;
+    showStatus(String(counter).c_str());
     Serial.print(".");
-    delay(1000);
-    timer++;
-    if(timer >= 10) {
-      WiFi.disconnect();
-      Serial.print("Trying next ssid: ");
-      ssidIndex++;
-      ssidIndex = ssidIndex % MAX_SSID;
-      Serial.print(ssids[ssidIndex][0]);
-      WiFi.begin(ssids[ssidIndex][0], ssids[ssidIndex][1]);
-      timer=0;
-    }
-    
   }
+
+  // Now we are connected
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+  showStatus(WiFi.localIP().toString().c_str());
+  delay(4000);
+//#else
+//  showStatus("checking wifi ...");
+//  Serial.print(ssids[ssidIndex][0]);
+//  while (WiFi.status() != WL_CONNECTED) {
+//    Serial.print(".");
+//    delay(1000);
+//    timer++;
+//    if(timer >= 10) {
+//      WiFi.disconnect();
+//      Serial.print("Trying next ssid: ");
+//      ssidIndex++;
+//      ssidIndex = ssidIndex % MAX_SSID;
+//      Serial.print(ssids[ssidIndex][0]);
+//      WiFi.begin(ssids[ssidIndex][0], ssids[ssidIndex][1]);
+//      timer=0;
+//    }
+//
+//  }
+//#endif
+
+  // happymeter
+  // CURL -X POST http://localhost:3000/api/storehappydocument -d {"happystatus": "above", "tags": "in the morning"}
+
+//  httpPost();
 
   verifySecure();
 
   Serial.print("\nconnecting...");
-  while (!client.connect("ClientId", MQTT_USER, MQTT_TOKEN)) {
+  while (!mqttClient.connect("ClientId", MQTT_USER, MQTT_TOKEN)) {
     Serial.print(".");
     delay(1000);
   }
@@ -203,16 +314,16 @@ void connect() {
   Serial.println("\nconnected!");
 
 #if SUBSCRIBE
-  client.subscribe(subscribeToken);
+  mqttClient.subscribe(subscribeToken);
 #endif
 
 }
 
 void loop() {
-  client.loop();
-  delay(10); // <- fixes some issues with WiFi stability
+  mqttClient.loop();
+  delay(50); // <- fixes some issues with WiFi stability
 
-  if(!client.connected()) {
+  if(!mqttClient.connected()) {
     connect();
   }
 
@@ -261,7 +372,7 @@ void loop() {
     u8g2.nextPage();      
 #endif
 
-        client.publish("rv90b/garage", "{portopen: true}");
+        mqttClient.publish("rv90b/garage", "{portopen: true}");
 //    client.publish("/hholi/site1/house1/floor0/temperature", String(t));
 //    client.publish("/hholi/site1/house1/floor0/humidity", String(h));
 //    client.publish("/hholi/site1/house1/floor0/smoke", "no");
