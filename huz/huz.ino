@@ -1,7 +1,7 @@
 /*
  * huz.ino
  * 
- * Empty - just here to please to Arduino IDE
- * As the real code is in the cpp file that Eclipse requires
+ * Empty - just here to please the Arduino IDE
+ * All source code is in the cpp file that Eclipse requires
  * 
  */

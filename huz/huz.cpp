@@ -1,11 +1,10 @@
 // This example uses an Adafruit Huzzah ESP8266 or NodeMCU
-// to connect to shiftr.io.
-//
-// See messages here: https://shiftr.io/hholi/house-surveillance
+// to send and receive messages via a MQTT message broker.
 
 // Build for board NodeMCU 1.0
 // or Feather Huzzah 
-//WiFi and MQTT
+
+// WiFi and MQTT
 // add the library MQTT by Joel Gaewhiler
 #include <ESP8266WiFi.h>
 #include <MQTTClient.h>
@@ -42,10 +41,6 @@ const char* fingerprint = "07:67:B4:D9:CC:33:53:52:36:14:D4:6E:9B:AD:3E:10:27:CD
 //OLED display
 // add the library U8g2 by oliver
 #include "U8g2lib.h" 
-
-
-//WPA EAP
-#define WPAEAP 1
 
 extern "C" {
   #include "user_interface.h"
@@ -121,7 +116,8 @@ void setup() {
 #endif 
   
   Serial.begin(115000);
-  showStatus("connecting...");
+  showStatus("Started");
+  delay(500);
 //  WiFi.begin(ssids[ssidIndex][0], ssids[ssidIndex][1]);
 //  mqttClient.begin("mqtt.hallgeirholien.no", 8883, net); // MQTT brokers usually use port 8883 for secure connections
 
@@ -238,6 +234,8 @@ Comments: -
 //}
 
 void connect() {
+	showStatus("Now connecting...");
+
 	while (ssids[ssidIndex][4] != "Y") {
 		ssidIndex++;
 		ssidIndex = ssidIndex % MAX_SSID;
@@ -248,6 +246,7 @@ void connect() {
 		delay(STARTUP_DELAY_MS);
 
 		// Setting ESP into STATION mode only (no AP mode or dual mode)
+		wifi_station_disconnect();
 		wifi_set_opmode(STATION_MODE);
 
 		struct station_config wifi_config;
@@ -311,22 +310,23 @@ void connect() {
 
 	//  httpPost();
 
-	mqttClient.begin("mqtt.hallgeirholien.no", 8883, net); // MQTT brokers usually use port 8883 for secure connections
+	if(1) { // MQTT
+		mqttClient.begin("mqtt.hallgeirholien.no", 8883, net); // MQTT brokers usually use port 8883 for secure connections
 
-	verifySecure();
+		//verifySecure();
 
-	Serial.print("\nconnecting...");
-	while (!mqttClient.connect("ClientId", MQTT_USER, MQTT_TOKEN)) {
-		Serial.print(".");
-		delay(1000);
+		Serial.print("\nconnecting...");
+		while (!mqttClient.connect("ClientId", MQTT_USER, MQTT_TOKEN)) {
+			Serial.print(".");
+			delay(1000);
+		}
+
+		Serial.println("\nconnected!");
+
+	#if SUBSCRIBE
+		mqttClient.subscribe(subscribeToken);
+	#endif
 	}
-
-	Serial.println("\nconnected!");
-
-#if SUBSCRIBE
-	mqttClient.subscribe(subscribeToken);
-#endif
-
 }
 
 void loop() {
@@ -382,7 +382,9 @@ void loop() {
     u8g2.nextPage();      
 #endif
 
-        mqttClient.publish("rv90b/garage", "{portopen: true}");
+#if MQTT
+    mqttClient.publish("rv90b/garage", "portopen: true");
+#endif
 //    client.publish("/hholi/site1/house1/floor0/temperature", String(t));
 //    client.publish("/hholi/site1/house1/floor0/humidity", String(h));
 //    client.publish("/hholi/site1/house1/floor0/smoke", "no");

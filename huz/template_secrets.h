@@ -1,8 +1,9 @@
 #define MAX_SSID 4
 
-const char * ssids[MAX_SSID][2] = {
-  {"ssid1", "pw1"},
-  {"ssid2", "pw2"}
+const char * ssids[MAX_SSID][5] = {
+		/* SSID,  PWD, EAP_USER, mode EAP or WAP, Active Y or N */
+		{"ssid1", "pw1", "USER", "EAP", "Y"},
+		{"ssid2", "pw2", "", "WAP", "Y"}
 };
 
 
